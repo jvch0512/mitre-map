@@ -59,13 +59,13 @@ function tags(string ...$t): string
 check(is_valid_id('T1059') && is_valid_id('T1059.001'), 'valid ids');
 check(!is_valid_id('T10599') && !is_valid_id('T105') && !is_valid_id('t1059') && !is_valid_id('T1059.1') && !is_valid_id('T1059.0011') && !is_valid_id('T1059.'), 'invalid ids');
 check(parent_of('T1059.001') === 'T1059' && parent_of('T1059') === 'T1059', 'parent_of');
-check(count(tactics()) === 14, 'fourteen tactics');
+check(count(tactics()) === 15 && isset(tactics()['stealth'], tactics()['defense-impairment']) && !isset(tactics()['defense-evasion']), 'fifteen tactics of the bundled release');
 check(rank('critical') < rank('high') && rank('low') < rank('info'), 'rank order');
 foreach (deprecated() as $old => $new) {
-    check(is_valid_id($old) && is_valid_id($new) && !isset(deprecated()[parent_of($new)]), "deprecated mapping $old");
+    check(is_valid_id($old) && ($new === null || (is_valid_id($new) && !isset(deprecated()[$new]))), "deprecated mapping $old");
 }
 foreach (catalogue() as $id => $ts) {
-    check(is_valid_id($id) && strpos($id, '.') === false, "catalogue id $id is a parent technique");
+    check(is_valid_id($id) && !isset(deprecated()[$id]), "catalogue id $id is a current technique");
     foreach ($ts as $t) {
         check(isset(tactics()[$t]), "catalogue tactic $t for $id");
     }
@@ -138,7 +138,7 @@ check(count(extract_refs("technique T1059", false)) === 1 && count(extract_refs(
 check(covered(tags('attack.execution')) === ['execution'], 'tactic tag covers');
 check(covered(tags('attack.t1059')) === ['execution'], 'technique covers its tactic');
 check(covered(tags('attack.t1059.001')) === ['execution'], 'sub-technique covers its parent tactics');
-check(covered(tags('attack.t1547')) === ['persistence', 'privilege_escalation'], 'technique in two tactics');
+check(covered(tags('attack.t1547')) === ['persistence', 'privilege-escalation'], 'technique in two tactics');
 check(covered(tags('attack.t9999')) === [], 'unknown technique covers nothing');
 
 // audit_path
@@ -146,7 +146,7 @@ check(covered(tags('attack.t9999')) === [], 'unknown technique covers nothing');
 check($n === 3, 'examples has three files');
 $rs = array_unique(array_map(fn($x) => $x['rule'], $f));
 sort($rs);
-check($rs === ['MIT000', 'MIT001', 'MIT002', 'MIT003', 'MIT004', 'MIT005'], 'examples exercise every rule');
+check($rs === ['MIT000', 'MIT001', 'MIT002', 'MIT003', 'MIT004', 'MIT005', 'MIT006', 'MIT007'], 'examples exercise every rule');
 $gaps = array_filter($f, fn($x) => $x['rule'] === 'MIT004');
 check(count($gaps) === 8, 'eight uncovered tactics in the examples');
 [$f2, $n2] = audit_path(__DIR__ . '/../examples/detections/readme.txt');

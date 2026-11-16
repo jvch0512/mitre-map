@@ -16,9 +16,9 @@ exp "no args" 2
 exp "bad fail-on" 2 examples --fail-on low
 exp "two paths" 2 examples examples
 N=$($BIN examples --tsv | head -1)
-echo "$N" | grep -Eq '^# 3 files, 14 findings$' && ok "tsv header" || bad "tsv header ($N)"
+echo "$N" | grep -Eq '^# 3 files, 17 findings$' && ok "tsv header" || bad "tsv header ($N)"
 $BIN examples --tsv | sed -n 2p | awk -F'\t' 'NF==4{exit 0} {exit 1}' && ok "tsv columns" || bad "tsv columns"
-$BIN examples | head -1 | grep -q '^3 files, 14 findings$' && ok "human header" || bad "human header"
+$BIN examples | head -1 | grep -q '^3 files, 17 findings$' && ok "human header" || bad "human header"
 printf 'tags:\n  - attack.t1086\n' > "$T/r.yml"
 $BIN "$T/r.yml" --tsv | grep -q $'\tMIT002\tr.yml:2\t' && ok "single file label" || bad "single file label"
 exp "clean full coverage passes" 0 "$T/r.yml" --fail-on high

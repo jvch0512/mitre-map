@@ -1,7 +1,8 @@
-# 3 files, 14 findings
+# 3 files, 17 findings
 high	MIT001	detections/proc_creation_powershell.yml:28	T10599 is not a valid technique ID, use T followed by four digits and an optional dot and three digits
-medium	MIT002	detections/coverage-notes.md:8	T1084 is deprecated, use T1546.003
-medium	MIT002	detections/proc_creation_powershell.yml:27	T1117 is deprecated, use T1218.010
+medium	MIT002	detections/coverage-notes.md:8	T1084 is retired in ATT&CK 20.1, use T1546.003
+medium	MIT002	detections/proc_creation_powershell.yml:27	T1117 is retired in ATT&CK 20.1, use T1218.010
+medium	MIT007	detections/proc_creation_powershell.yml:30	T9999 does not exist in ATT&CK 20.1
 low	MIT004	(coverage)	no detection content in the scanned set references the Collection tactic
 low	MIT004	(coverage)	no detection content in the scanned set references the Command and Control tactic
 low	MIT004	(coverage)	no detection content in the scanned set references the Discovery tactic
@@ -10,6 +11,8 @@ low	MIT004	(coverage)	no detection content in the scanned set references the Ini
 low	MIT004	(coverage)	no detection content in the scanned set references the Lateral Movement tactic
 low	MIT004	(coverage)	no detection content in the scanned set references the Reconnaissance tactic
 low	MIT004	(coverage)	no detection content in the scanned set references the Resource Development tactic
+low	MIT007	detections/coverage-notes.md:10	T2026 does not exist in ATT&CK 20.1
 low	MIT003	detections/proc_creation_powershell.yml:8	T1059 is redundant next to T1059.001 in the same rule
 low	MIT005	detections/proc_creation_powershell.yml:26	tag attack.defence_evasion is not a tactic, technique, group or software ID
+low	MIT006	detections/proc_creation_powershell.yml:29	tag attack.defense-evasion predates ATT&CK v18, which split it into stealth and defense-impairment
 info	MIT000	detections/readme.txt	no ATT&CK references found

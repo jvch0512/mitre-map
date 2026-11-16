@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace MitreMap;
 
+require_once __DIR__ . '/AttackData.php';
+
 const RANK = ['critical' => 0, 'high' => 1, 'medium' => 2, 'low' => 3, 'info' => 4];
 const MAX_BYTES = 20000000;
 const EXTENSIONS = ['yml', 'yaml', 'yar', 'yara', 'md', 'txt', 'csv', 'tsv', 'json'];
@@ -12,71 +14,56 @@ function rank(string $sev): int
     return RANK[$sev] ?? 4;
 }
 
-/** Enterprise tactics: Sigma tag name => display name. */
+/** Enterprise tactics of the bundled ATT&CK release: tag name (as Sigma writes it, with hyphens) => display name. */
 function tactics(): array
 {
-    return [
-        'reconnaissance' => 'Reconnaissance',
-        'resource_development' => 'Resource Development',
-        'initial_access' => 'Initial Access',
-        'execution' => 'Execution',
-        'persistence' => 'Persistence',
-        'privilege_escalation' => 'Privilege Escalation',
-        'defense_evasion' => 'Defense Evasion',
-        'credential_access' => 'Credential Access',
-        'discovery' => 'Discovery',
-        'lateral_movement' => 'Lateral Movement',
-        'collection' => 'Collection',
-        'command_and_control' => 'Command and Control',
-        'exfiltration' => 'Exfiltration',
-        'impact' => 'Impact',
-    ];
+    $t = [];
+    foreach (ATTACK_TACTICS as $short => [$id, $name]) {
+        $t[$short] = $name;
+    }
+    return $t;
 }
 
-/** Common parent techniques and the tactics they belong to. Used for coverage only. */
+/** Turns a tag spelling into the canonical shortname: Sigma used underscores before it moved to hyphens. */
+function tactic_key(string $v): string
+{
+    return str_replace('_', '-', strtolower($v));
+}
+
+/** Technique id => tactics it belongs to, for current Enterprise techniques. Used for coverage only. */
 function catalogue(): array
 {
     static $c = null;
-    if ($c !== null) {
-        return $c;
-    }
-    $by = [
-        'reconnaissance' => ['T1595', 'T1592', 'T1589', 'T1590', 'T1593', 'T1598', 'T1591', 'T1594', 'T1596', 'T1597'],
-        'resource_development' => ['T1583', 'T1584', 'T1587', 'T1588', 'T1585', 'T1586', 'T1608', 'T1650'],
-        'initial_access' => ['T1566', 'T1190', 'T1133', 'T1078', 'T1195', 'T1189', 'T1199', 'T1091', 'T1200'],
-        'execution' => ['T1059', 'T1053', 'T1047', 'T1204', 'T1569', 'T1203', 'T1106', 'T1129', 'T1559', 'T1610'],
-        'persistence' => ['T1547', 'T1543', 'T1546', 'T1136', 'T1505', 'T1197', 'T1098', 'T1574', 'T1053', 'T1133', 'T1078', 'T1176', 'T1037', 'T1542'],
-        'privilege_escalation' => ['T1548', 'T1134', 'T1055', 'T1068', 'T1547', 'T1543', 'T1546', 'T1574', 'T1053', 'T1078', 'T1037', 'T1484'],
-        'defense_evasion' => ['T1562', 'T1070', 'T1027', 'T1218', 'T1036', 'T1112', 'T1140', 'T1202', 'T1222', 'T1564', 'T1620', 'T1055', 'T1574', 'T1548', 'T1134', 'T1078', 'T1553', 'T1480', 'T1497', 'T1006', 'T1207', 'T1014'],
-        'credential_access' => ['T1003', 'T1110', 'T1555', 'T1558', 'T1056', 'T1552', 'T1557', 'T1539', 'T1528', 'T1111', 'T1212', 'T1187', 'T1606', 'T1556'],
-        'discovery' => ['T1082', 'T1083', 'T1087', 'T1018', 'T1016', 'T1049', 'T1057', 'T1069', 'T1135', 'T1046', 'T1033', 'T1007', 'T1012', 'T1518', 'T1124', 'T1217', 'T1482', 'T1526', 'T1580'],
-        'lateral_movement' => ['T1021', 'T1570', 'T1550', 'T1210', 'T1534', 'T1563', 'T1072'],
-        'collection' => ['T1005', 'T1560', 'T1114', 'T1113', 'T1039', 'T1074', 'T1119', 'T1056', 'T1115', 'T1123', 'T1125', 'T1530', 'T1213'],
-        'command_and_control' => ['T1071', 'T1105', 'T1572', 'T1090', 'T1573', 'T1095', 'T1219', 'T1132', 'T1568', 'T1102', 'T1001', 'T1008', 'T1104'],
-        'exfiltration' => ['T1041', 'T1048', 'T1567', 'T1020', 'T1030', 'T1029', 'T1537', 'T1052'],
-        'impact' => ['T1486', 'T1490', 'T1489', 'T1485', 'T1496', 'T1498', 'T1529', 'T1491', 'T1499', 'T1565', 'T1531'],
-    ];
-    $c = [];
-    foreach ($by as $tactic => $ids) {
-        foreach ($ids as $id) {
-            $c[$id][] = $tactic;
+    if ($c === null) {
+        $c = [];
+        foreach (ATTACK_TECHNIQUES as $id => [$name, $tac, $status, $by, $dom]) {
+            if ($dom === 0 && $status === 'active') {
+                $c[$id] = $tac;
+            }
         }
     }
     return $c;
 }
 
-/** Technique IDs retired in the 2020 sub-technique restructuring and what replaced them. */
+/** Retired technique ids (revoked or deprecated) => replacement id or null when ATT&CK names none. */
 function deprecated(): array
 {
-    return [
-        'T1086' => 'T1059.001', 'T1064' => 'T1059', 'T1117' => 'T1218.010', 'T1085' => 'T1218.011',
-        'T1170' => 'T1218.005', 'T1121' => 'T1218.009', 'T1118' => 'T1218.004', 'T1191' => 'T1218.003',
-        'T1089' => 'T1562.001', 'T1060' => 'T1547.001', 'T1050' => 'T1543.003', 'T1073' => 'T1574.002',
-        'T1088' => 'T1548.002', 'T1107' => 'T1070.004', 'T1099' => 'T1070.006', 'T1100' => 'T1505.003',
-        'T1084' => 'T1546.003', 'T1015' => 'T1546.008', 'T1178' => 'T1134.005', 'T1035' => 'T1569.002',
-        'T1028' => 'T1021.006', 'T1076' => 'T1021.001', 'T1077' => 'T1021.002', 'T1193' => 'T1566.001',
-        'T1192' => 'T1566.002', 'T1194' => 'T1566.003',
-    ];
+    static $d = null;
+    if ($d === null) {
+        $d = [];
+        foreach (ATTACK_TECHNIQUES as $id => [$name, $tac, $status, $by, $dom]) {
+            if ($status !== 'active') {
+                $d[$id] = $by;
+            }
+        }
+    }
+    return $d;
+}
+
+/** True when the id exists in the bundled Enterprise, ICS or Mobile release (retired ids included). */
+function known_technique(string $id): bool
+{
+    return isset(ATTACK_TECHNIQUES[$id]);
 }
 
 function is_valid_id(string $id): bool
@@ -117,8 +104,12 @@ function extract_refs(string $text, bool $yaml): array
                     $add('bad', strtoupper($v));
                 } elseif (preg_match('/^[gs]\d{4}$/', $v)) {
                     $add('other', strtoupper($v));
-                } elseif (isset(tactics()[$v])) {
-                    $add('tactic', $v);
+                } elseif (isset(tactics()[tactic_key($v)])) {
+                    $add('tactic', tactic_key($v));
+                } elseif ($v === 'defense-evasion' || $v === 'defense_evasion') {
+                    $add('legacy_tactic', 'defense-evasion');
+                } elseif (in_array(tactic_key($v), ATTACK_OTHER_TACTICS, true)) {
+                    $add('other_tactic', tactic_key($v));
                 } else {
                     $add('unknown', $raw);
                 }
@@ -172,11 +163,27 @@ function audit_text(string $text, string $file, array &$cov): array
             case 'tactic':
                 $cov[$r['value']] = true;
                 break;
+            case 'legacy_tactic':
+                $out[] = finding('low', 'MIT006', $file, $r['line'], 'tag attack.defense-evasion predates ATT&CK v18, which split it into stealth and defense-impairment');
+                foreach (['stealth', 'defense-impairment'] as $t) {
+                    $cov[$t] = true;
+                }
+                break;
+            case 'other_tactic':
+                break;
+            case 'other':
+                $list = $r['value'][0] === 'G' ? ATTACK_GROUPS : ATTACK_SOFTWARE;
+                if (!in_array($r['value'], $list, true)) {
+                    $out[] = finding('low', 'MIT005', $file, $r['line'], 'tag attack.' . strtolower($r['value']) . ' is not a current ATT&CK group or software ID');
+                }
+                break;
             case 'id':
-                if (isset($dep[$r['value']])) {
-                    $out[] = finding('medium', 'MIT002', $file, $r['line'], $r['value'] . ' is deprecated, use ' . $dep[$r['value']]);
+                if (!known_technique($r['value'])) {
+                    $out[] = finding($yaml ? 'medium' : 'low', 'MIT007', $file, $r['line'], $r['value'] . ' does not exist in ATT&CK ' . ATTACK_VERSION);
+                } elseif (array_key_exists($r['value'], $dep)) {
+                    $out[] = finding('medium', 'MIT002', $file, $r['line'], $r['value'] . ' is retired in ATT&CK ' . ATTACK_VERSION . ($dep[$r['value']] !== null ? ', use ' . $dep[$r['value']] : ', with no replacement named'));
                 } else {
-                    foreach ($cat[parent_of($r['value'])] ?? [] as $t) {
+                    foreach ($cat[$r['value']] ?? $cat[parent_of($r['value'])] ?? [] as $t) {
                         $cov[$t] = true;
                     }
                 }
