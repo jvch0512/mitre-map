@@ -1,0 +1,75 @@
+#!/usr/bin/env php
+<?php
+declare(strict_types=1);
+
+require __DIR__ . '/../lib/MitreMap.php';
+
+use function MitreMap\audit_path;
+use function MitreMap\rank;
+
+function usage(): int
+{
+    fwrite(STDERR, "usage: mitre-map PATH [--tsv] [--fail-on medium|high|critical]\nExit: 0 ok, 1 findings at or above --fail-on, 2 bad input.\n");
+    return 2;
+}
+
+function run(array $argv): int
+{
+    $path = null;
+    $tsv = false;
+    $failOn = null;
+    $a = array_slice($argv, 1);
+    for ($i = 0; $i < count($a); $i++) {
+        $x = $a[$i];
+        if ($x === '--tsv') {
+            $tsv = true;
+        } elseif ($x === '--fail-on') {
+            $i++;
+            if (!isset($a[$i]) || !in_array($a[$i], ['medium', 'high', 'critical'], true)) {
+                return usage();
+            }
+            $failOn = $a[$i];
+        } elseif (strlen($x) > 1 && $x[0] === '-') {
+            return usage();
+        } elseif ($path !== null) {
+            return usage();
+        } else {
+            $path = $x;
+        }
+    }
+    if ($path === null) {
+        return usage();
+    }
+    if (!file_exists($path)) {
+        fwrite(STDERR, "error: no such file or directory: $path\n");
+        return 2;
+    }
+    if (strlen($path) > 1) {
+        $path = rtrim($path, '/');
+    }
+    if ($path === '') {
+        $path = '/';
+    }
+    [$findings, $n] = audit_path($path);
+    $head = $n . ' files, ' . count($findings) . ' findings';
+    $out = [$tsv ? "# $head" : $head];
+    foreach ($findings as $f) {
+        if ($tsv) {
+            $out[] = implode("\t", [$f['sev'], $f['rule'], $f['where'], $f['msg']]);
+        } else {
+            $out[] = sprintf('%-8s %s %s', strtoupper($f['sev']), $f['rule'], $f['where']);
+            $out[] = '         ' . $f['msg'];
+        }
+    }
+    fwrite(STDOUT, implode("\n", $out) . "\n");
+    if ($failOn !== null) {
+        foreach ($findings as $f) {
+            if (rank($f['sev']) <= rank($failOn)) {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+exit(run($argv));

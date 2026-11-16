@@ -1,0 +1,38 @@
+title: Suspicious Encoded PowerShell
+id: 7b0cdb62-7c6a-4f50-9ee2-3a3a6b0a5a11
+status: test
+description: Detects encoded PowerShell command lines.
+author: Example Team
+tags:
+  - attack.execution
+  - attack.t1059
+  - attack.t1059.001
+  - attack.defense_evasion
+  - attack.t1027
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    CommandLine|contains: ' -enc '
+  condition: selection
+level: high
+---
+title: Legacy Regsvr32 Execution
+id: 0f1d2a58-2cb9-4a0a-8f5e-6a9a2c4b1e22
+description: Old rule that still uses the pre-2020 IDs.
+author: Example Team
+tags:
+  - attack.defence_evasion
+  - attack.t1117
+  - attack.t10599
+  - attack.persistence
+  - attack.t1547.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: '\regsvr32.exe'
+  condition: selection
+level: medium
